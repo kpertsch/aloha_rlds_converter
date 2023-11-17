@@ -3,11 +3,12 @@ from typing import Iterator, Tuple, Any
 import copy
 import cv2
 import glob
+import h5py
 import numpy as np
 import tensorflow as tf
 import tensorflow_hub as hub
 import tensorflow_datasets as tfds
-from example_dataset.conversion_utils import MultiThreadedDatasetBuilder
+from aloha_screwdriver_dataset.conversion_utils import MultiThreadedDatasetBuilder
 
 
 CAM_NAMES = ['cam_high', 'cam_left_wrist', 'cam_low', 'cam_right_wrist']
@@ -20,10 +21,10 @@ def _generate_examples(paths) -> Iterator[Tuple[str, Any]]:
     def _parse_example(episode_path):
         # load raw data --> this should change for your dataset
         with h5py.File(episode_path, "r") as root:
-            qpos = root['/observations/qpos']
-            image_dict = {cam_name: root[f'/observations/images/{cam_name}']
+            qpos = root['/observations/qpos'][()]
+            image_dict = {cam_name: root[f'/observations/images/{cam_name}'][()]
                           for cam_name in CAM_NAMES}
-            action = root['/action']
+            action = root['/action'][()]
 
         # assemble episode --> here we're assuming demos so we set reward to 1 at the end
         episode = []
@@ -58,7 +59,7 @@ def _generate_examples(paths) -> Iterator[Tuple[str, Any]]:
         yield _parse_example(sample)
 
 
-class ExampleDataset(MultiThreadedDatasetBuilder):
+class AlohaScrewdriverDataset(MultiThreadedDatasetBuilder):
     """DatasetBuilder for example dataset."""
 
     VERSION = tfds.core.Version('1.0.0')
@@ -129,6 +130,6 @@ class ExampleDataset(MultiThreadedDatasetBuilder):
         """Define filepaths for data splits."""
         print(self.info)
         return {
-            'train': glob.glob('/nfs/kun2/users/karl/data/aloha/aloha_screwdriver/episode_*.h5'),
+            'train': glob.glob('/nfs/kun2/users/karl/data/aloha/aloha_screwdriver/episode_*.hdf5'),
         }
 
