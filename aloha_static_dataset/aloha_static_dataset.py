@@ -10,14 +10,29 @@ import tensorflow_hub as hub
 import tensorflow_datasets as tfds
 from aloha_static_dataset.conversion_utils import MultiThreadedDatasetBuilder
 
-
-#CAM_NAMES = ['top']
-INSTRUCTION = 'pick up the cube and hand it over'
-FILE_PATH = '/nfs/kun2/datasets/aloha/aloha_static/**/episode_*.hdf5'
-
 CAM_NAMES = ['cam_high', 'cam_left_wrist', 'cam_low', 'cam_right_wrist']
-#INSTRUCTION = 'place the screwdriver in the cup'
-#FILE_PATH = '/nfs/kun2/datasets/aloha/aloha_screwdriver/episode_*.hdf5'
+INSTRUCTIONS = {
+    "12_01_ziploc_slide_50_compressed": "open the ziplog bag",
+    "1_22_cups_open_compressed": "open the plastic cup",
+    "3objects_test": "pack the objects in the bag",
+    "aloha_coffee_compressed": "make coffee",
+    "aloha_pingpong_test_compressed": "pour one ball from one cup into the other",
+    "aloha_screwdriver": "pick up the screwdriver and move it to our left hand",
+    "aloha_vinh_cup_compressed": "open the plastic cup",
+    "aloha_coffee_new_compressed": "make coffee",
+    "aloha_plate_sponge": "wipe the plate with the sponge",
+    "candy_compressed": "unwrap the candy",
+    "aloha_screw_driver_compressed": "pick up the screwdriver and put it in the cup",
+    "thread_velcro_compressed": "close the velcro strap",
+    "aloha_vinh_cup_left_compressed": "open the plastic cup",
+    "aloha_fork_pick_up_compressed": "pick up the fork and place it on the plate",
+    "aloha_pro_pencil_compressed": "pick up the pen and put it on the other side of the table",
+    "aloha_towel_compressed": "tear off a paper towel and put it onto the spill",
+    "battery_compressed": "put the battery into the remote control",
+    "tape_compressed": "tear off a piece of adhesive tape and put it on the box",
+}
+CROP_DATASETS = ["aloha_pro_pencil_compressed", "aloha_screwdriver"]
+FILE_PATH = '/nfs/kun2/datasets/aloha/static_aloha/**/episode_*.hdf5'
 
 
 def crop_resize(image, crop_h=240, crop_w=320, resize_h=480, resize_w=640, resize=True):
@@ -42,18 +57,23 @@ def _generate_examples(paths) -> Iterator[Tuple[str, Any]]:
                           for cam_name in CAM_NAMES}
             action = root['/action'][()]
 
+        # get language instruction
+        instruction, dataset_name = None, None
+        for key in INSTRUCTIONS:
+            if key in episode_path:
+                dataset_name = key
+                instruction = INSTRUCTIONS[key]
+        if instruction is None:
+            raise ValueError(f"Couldn't find instruction for {episode_path}")
+
         # assemble episode --> here we're assuming demos so we set reward to 1 at the end
         episode = []
         for i in range(action.shape[0]):
-            if 'top' in CAM_NAMES:
-                # sim dataset
-                imgs = {cam_name: image_dict[cam_name][i] for cam_name in CAM_NAMES}
-            else:
-                # real robot dataset
-                imgs = {cam_name: cv2.imdecode(image_dict[cam_name][i], 1)[..., ::-1] for cam_name in CAM_NAMES}
-                if 'cam_high' in CAM_NAMES:
-                    imgs['cam_high'] = crop_resize(
-                        imgs['cam_high'][..., ::-1])[..., ::-1]
+            # real robot dataset
+            imgs = {cam_name: cv2.imdecode(image_dict[cam_name][i], 1)[..., ::-1] for cam_name in CAM_NAMES}
+            if 'cam_high' in CAM_NAMES and dataset_name in CROP_DATASETS:
+                imgs['cam_high'] = crop_resize(
+                    imgs['cam_high'][..., ::-1])[..., ::-1]
 
             episode.append({
                 'observation': {
@@ -66,7 +86,7 @@ def _generate_examples(paths) -> Iterator[Tuple[str, Any]]:
                 'is_first': i == 0,
                 'is_last': i == (len(action) - 1),
                 'is_terminal': i == (len(action) - 1),
-                'language_instruction': copy.deepcopy(INSTRUCTION),
+                'language_instruction': instruction,
             })
 
         # create output data sample
