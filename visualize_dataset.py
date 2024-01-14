@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import wandb
 
 
-WANDB_ENTITY = None
+WANDB_ENTITY = 'clvr'
 WANDB_PROJECT = 'vis_rlds'
 
 
@@ -26,17 +26,17 @@ else:
 
 
 # create TF dataset
-dataset_name = args.dataset_name
+dataset_name = "aloha_screwdriver_dataset" #args.dataset_name
 print(f"Visualizing data from dataset: {dataset_name}")
 module = importlib.import_module(dataset_name)
-ds = tfds.load(dataset_name, split='train')
+ds = tfds.load(dataset_name, split='train', data_dir="/nfs/kun2/datasets/tfds")
 ds = ds.shuffle(100)
 
 # visualize episodes
 for i, episode in enumerate(ds.take(5)):
     images = []
     for step in episode['steps']:
-        images.append(step['observation']['image'].numpy())
+        images.append(step['observation']['cam_left_wrist'].numpy())
     image_strip = np.concatenate(images[::4], axis=1)
     caption = step['language_instruction'].numpy().decode() + ' (temp. downsampled 4x)'
 

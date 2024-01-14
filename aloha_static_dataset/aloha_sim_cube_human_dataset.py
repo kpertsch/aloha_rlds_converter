@@ -8,11 +8,27 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_hub as hub
 import tensorflow_datasets as tfds
-from aloha_screwdriver_dataset.conversion_utils import MultiThreadedDatasetBuilder
+from aloha_static_dataset.conversion_utils import MultiThreadedDatasetBuilder
 
+
+#CAM_NAMES = ['top']
+INSTRUCTION = 'pick up the cube and hand it over'
+FILE_PATH = '/nfs/kun2/datasets/aloha/aloha_static/**/episode_*.hdf5'
 
 CAM_NAMES = ['cam_high', 'cam_left_wrist', 'cam_low', 'cam_right_wrist']
-INSTRUCTION = 'place the screwdriver in the cup'
+#INSTRUCTION = 'place the screwdriver in the cup'
+#FILE_PATH = '/nfs/kun2/datasets/aloha/aloha_screwdriver/episode_*.hdf5'
+
+
+def crop_resize(image, crop_h=240, crop_w=320, resize_h=480, resize_w=640, resize=True):
+    """
+    Helper function to crop the bottom middle (offset by 20 pixels) and resize
+    """
+    h, w, _ = image.shape
+    y1 = h - crop_h - 20  # Subtracting 20 to start 20 pixels above the bottom
+    x1 = (w - crop_w) // 2
+    cropped = image[y1:y1+crop_h, x1:x1+crop_w]
+    return cv2.resize(cropped, (resize_w, resize_h)) if resize else cropped
 
 
 def _generate_examples(paths) -> Iterator[Tuple[str, Any]]:
@@ -29,9 +45,19 @@ def _generate_examples(paths) -> Iterator[Tuple[str, Any]]:
         # assemble episode --> here we're assuming demos so we set reward to 1 at the end
         episode = []
         for i in range(action.shape[0]):
+            if 'top' in CAM_NAMES:
+                # sim dataset
+                imgs = {cam_name: image_dict[cam_name][i] for cam_name in CAM_NAMES}
+            else:
+                # real robot dataset
+                imgs = {cam_name: cv2.imdecode(image_dict[cam_name][i], 1)[..., ::-1] for cam_name in CAM_NAMES}
+                if 'cam_high' in CAM_NAMES:
+                    imgs['cam_high'] = crop_resize(
+                        imgs['cam_high'][..., ::-1])[..., ::-1]
+
             episode.append({
                 'observation': {
-                    **{cam_name: cv2.imdecode(image_dict[cam_name][i], 1)[..., ::-1] for cam_name in CAM_NAMES},
+                    **imgs,
                     'state': qpos[i],
                 },
                 'action': action[i],
@@ -59,7 +85,7 @@ def _generate_examples(paths) -> Iterator[Tuple[str, Any]]:
         yield _parse_example(sample)
 
 
-class AlohaScrewdriverDataset(MultiThreadedDatasetBuilder):
+class AlohaStaticDataset(MultiThreadedDatasetBuilder):
     """DatasetBuilder for example dataset."""
 
     VERSION = tfds.core.Version('1.0.0')
@@ -130,6 +156,6 @@ class AlohaScrewdriverDataset(MultiThreadedDatasetBuilder):
         """Define filepaths for data splits."""
         print(self.info)
         return {
-            'train': glob.glob('/nfs/kun2/users/karl/data/aloha/aloha_screwdriver/episode_*.hdf5'),
+            'train': glob.glob(FILE_PATH),
         }
 

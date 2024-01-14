@@ -1,3 +1,3 @@
 from setuptools import setup
 
-setup(name="aloha_screwdriver_dataset", packages=["aloha_screwdriver_dataset"])
+setup(name="aloha_static_dataset", packages=["aloha_static_dataset"])
