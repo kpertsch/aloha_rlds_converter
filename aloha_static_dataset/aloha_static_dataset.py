@@ -70,7 +70,11 @@ def _generate_examples(paths) -> Iterator[Tuple[str, Any]]:
         episode = []
         for i in range(action.shape[0]):
             # real robot dataset
-            imgs = {cam_name: cv2.imdecode(image_dict[cam_name][i], 1)[..., ::-1] for cam_name in CAM_NAMES}
+            try:
+                imgs = {cam_name: cv2.imdecode(image_dict[cam_name][i], 1)[..., ::-1] for cam_name in CAM_NAMES}
+            except:
+                print(f"Skipping {episode_path}")
+                return None
             if 'cam_high' in CAM_NAMES and dataset_name in CROP_DATASETS:
                 imgs['cam_high'] = crop_resize(
                     imgs['cam_high'][..., ::-1])[..., ::-1]
@@ -112,8 +116,8 @@ class AlohaStaticDataset(MultiThreadedDatasetBuilder):
     RELEASE_NOTES = {
       '1.0.0': 'Initial release.',
     }
-    N_WORKERS = 5              # number of parallel workers for data conversion
-    MAX_PATHS_IN_MEMORY = 20   # number of paths converted & stored in memory before writing to disk
+    N_WORKERS = 40              # number of parallel workers for data conversion
+    MAX_PATHS_IN_MEMORY = 80   # number of paths converted & stored in memory before writing to disk
                                # -> the higher the faster / more parallel conversion, adjust based on avilable RAM
                                # note that one path may yield multiple episodes and adjust accordingly
     PARSE_FCN = _generate_examples      # handle to parse function from file paths to RLDS episodes

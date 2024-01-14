@@ -17,7 +17,7 @@ INSTRUCTIONS = {
     "aloha_mobile_elevator_truncated": "navigate to elevator, push the call button, then enter the elevator",
     "aloha_mobile_shrimp_truncated": "add oil to the pan and cook the shrimp and serve it",
     "aloha_mobile_wash_pan": "wash the pan",
-    "aloha_mobile_wipe_pan": "get the cloth and wipe up the spill under the wine glass",
+    "aloha_mobile_wipe_wine": "get the cloth and wipe up the spill under the wine glass",
 }
 FILE_PATH = '/nfs/kun2/datasets/aloha/mobile_aloha/**/episode_*.hdf5'
 
@@ -27,12 +27,16 @@ def _generate_examples(paths) -> Iterator[Tuple[str, Any]]:
 
     def _parse_example(episode_path):
         # load raw data --> this should change for your dataset
-        with h5py.File(episode_path, "r") as root:
-            qpos = root['/observations/qpos'][()]
-            image_dict = {cam_name: root[f'/observations/images/{cam_name}'][()]
-                          for cam_name in CAM_NAMES}
-            action = root['/action'][()]
-            base_action = root['/base_action'][()]
+        try:
+            with h5py.File(episode_path, "r") as root:
+                qpos = root['/observations/qpos'][()]
+                image_dict = {cam_name: root[f'/observations/images/{cam_name}'][()]
+                              for cam_name in CAM_NAMES}
+                action = root['/action'][()]
+                base_action = root['/base_action'][()]
+        except:
+            print(f"Could not load h5 for {episode_path}")
+            return None
 
         # get language instruction
         instruction, dataset_name = None, None
@@ -83,15 +87,15 @@ def _generate_examples(paths) -> Iterator[Tuple[str, Any]]:
         yield _parse_example(sample)
 
 
-class AlohaStaticDataset(MultiThreadedDatasetBuilder):
+class AlohaMobileDataset(MultiThreadedDatasetBuilder):
     """DatasetBuilder for example dataset."""
 
     VERSION = tfds.core.Version('1.0.0')
     RELEASE_NOTES = {
       '1.0.0': 'Initial release.',
     }
-    N_WORKERS = 5              # number of parallel workers for data conversion
-    MAX_PATHS_IN_MEMORY = 20   # number of paths converted & stored in memory before writing to disk
+    N_WORKERS = 40              # number of parallel workers for data conversion
+    MAX_PATHS_IN_MEMORY = 40   # number of paths converted & stored in memory before writing to disk
                                # -> the higher the faster / more parallel conversion, adjust based on avilable RAM
                                # note that one path may yield multiple episodes and adjust accordingly
     PARSE_FCN = _generate_examples      # handle to parse function from file paths to RLDS episodes
