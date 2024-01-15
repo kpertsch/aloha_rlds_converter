@@ -1,3 +1,3 @@
 from setuptools import setup
 
-setup(name="aloha_static_dataset", packages=["aloha_static_dataset"])
+setup(name="aloha_dagger_dataset", packages=["aloha_dagger_dataset"])

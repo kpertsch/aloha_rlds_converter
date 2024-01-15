@@ -52,7 +52,7 @@ def _generate_examples(paths) -> Iterator[Tuple[str, Any]]:
         for i in range(action.shape[0]):
             # real robot dataset
             try:
-                imgs = {cam_name: cv2.imdecode(image_dict[cam_name][i], 1)[..., ::-1] for cam_name in CAM_NAMES}
+                imgs = {cam_name: cv2.imdecode(image_dict[cam_name][i], 1) for cam_name in CAM_NAMES}
             except:
                 print(f"Skipping {episode_path}")
                 return None

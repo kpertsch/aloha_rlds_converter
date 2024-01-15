@@ -51,11 +51,15 @@ def _generate_examples(paths) -> Iterator[Tuple[str, Any]]:
 
     def _parse_example(episode_path):
         # load raw data --> this should change for your dataset
-        with h5py.File(episode_path, "r") as root:
-            qpos = root['/observations/qpos'][()]
-            image_dict = {cam_name: root[f'/observations/images/{cam_name}'][()]
-                          for cam_name in CAM_NAMES}
-            action = root['/action'][()]
+        try:
+            with h5py.File(episode_path, "r") as root:
+                qpos = root['/observations/qpos'][()]
+                image_dict = {cam_name: root[f'/observations/images/{cam_name}'][()]
+                              for cam_name in CAM_NAMES}
+                action = root['/action'][()]
+        except:
+            print(f"Failed to load data for {episode_path}")
+            return None
 
         # get language instruction
         instruction, dataset_name = None, None
@@ -71,7 +75,7 @@ def _generate_examples(paths) -> Iterator[Tuple[str, Any]]:
         for i in range(action.shape[0]):
             # real robot dataset
             try:
-                imgs = {cam_name: cv2.imdecode(image_dict[cam_name][i], 1)[..., ::-1] for cam_name in CAM_NAMES}
+                imgs = {cam_name: cv2.imdecode(image_dict[cam_name][i], 1) for cam_name in CAM_NAMES}
             except:
                 print(f"Skipping {episode_path}")
                 return None

@@ -14,6 +14,7 @@ from aloha_dagger_dataset.conversion_utils import MultiThreadedDatasetBuilder
 CAM_NAMES = ['cam_high', 'cam_left_wrist', 'cam_low', 'cam_right_wrist']
 
 NO_CROP_DATASETS = ["aloha_plate_sponge"]
+SKIP_DATASETS = ["aloha_plate_sponge"]
 FILE_PATH = '/nfs/kun2/datasets/aloha/dagger_aloha/**/episode_*.hdf5'
 
 
@@ -45,6 +46,7 @@ def _generate_examples(paths) -> Iterator[Tuple[str, Any]]:
 
         # load annotation data
         annotation_file = episode_path[:-4] + 'json'
+        annotation_data = []
         try:
             with open(annotation_file, "r") as F:
                 annotation_data = json.load(F)
@@ -167,6 +169,7 @@ class AlohaDaggerDataset(MultiThreadedDatasetBuilder):
                         doc='Path to the original data file.'
                     ),
                     'trajectory_segment': tfds.features.Scalar(
+                        dtype=np.int_,
                         doc='Index of language segment in trajectory.'
                     ),
                 }),
@@ -174,8 +177,17 @@ class AlohaDaggerDataset(MultiThreadedDatasetBuilder):
 
     def _split_paths(self):
         """Define filepaths for data splits."""
-        print(self.info)
+        paths = glob.glob(FILE_PATH)
+        print(len(paths))
+        filtered_paths = []
+        for path in paths:
+            if any([k in path for k in SKIP_DATASETS]):
+                continue
+            filtered_paths.append(path)
+        #filtered_paths = filtered_paths[:int(len(filtered_paths) * 0.8)]
+        print(len(filtered_paths))
+
         return {
-            'train': glob.glob(FILE_PATH),
+            'train': filtered_paths,
         }
 

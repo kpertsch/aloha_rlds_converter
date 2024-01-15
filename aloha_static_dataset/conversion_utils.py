@@ -191,8 +191,12 @@ class ParallelSplitBuilder(split_builder_lib.SplitBuilder):
             print("Writing conversion results...")
             for result in itertools.chain(*results):
                 key, serialized_example = result
-                writer._shuffler.add(key, serialized_example)
-                writer._num_examples += 1
+                try:
+                    writer._shuffler.add(key, serialized_example)
+                    writer._num_examples += 1
+                except:
+                    print(f"Write error for {key}")
+                    continue
         pool.close()
 
         print("Finishing split conversion...")
