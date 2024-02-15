@@ -56,7 +56,7 @@ def _generate_examples(paths) -> Iterator[Tuple[str, Any]]:
         for i in range(action.shape[0]):
             # real robot dataset
             try:
-                imgs = {cam_name: cv2.imdecode(image_dict[cam_name][i], 1) for cam_name in CAM_NAMES}
+                imgs = {cam_name: cv2.imdecode(image_dict[cam_name][i], 1)[..., ::-1] for cam_name in CAM_NAMES}
             except:
                 print(f"Skipping {episode_path}")
                 return None
@@ -94,7 +94,7 @@ def _generate_examples(paths) -> Iterator[Tuple[str, Any]]:
         yield _parse_example(sample)
 
 
-class AlohaSpongPickDataset(MultiThreadedDatasetBuilder):
+class AlohaSpongePickDataset(MultiThreadedDatasetBuilder):
     """DatasetBuilder for example dataset."""
 
     VERSION = tfds.core.Version('1.0.0')
